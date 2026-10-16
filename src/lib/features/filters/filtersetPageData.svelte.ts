@@ -11,6 +11,7 @@ import {
 } from "@/lib/services/userSettings.svelte";
 import { openModal } from "@/lib/ui/modal.svelte";
 import { getId } from "@/lib/utils/uuid";
+import { moveItem } from "@/lib/features/filters/filtersetOrder";
 
 type FilterWithFilters = Exclude<AnyFilter, FilterS2Cell>;
 
@@ -147,6 +148,27 @@ export function updateDetailsCurrentSelectedFilterset() {
 
 export function toggleFilterset(filterset: AnyFilterset, mapObject: MapObjectType) {
 	filterset.enabled = !filterset.enabled;
+
+	updateUserSettings();
+	deleteAllFeaturesOfType(mapObject);
+	updateAllMapObjects().then();
+}
+
+export function moveFilterset(
+	majorCategory: FilterCategory,
+	subCategory: FilterCategory | undefined,
+	from: number,
+	to: number,
+	mapObject: MapObjectType
+) {
+	let filter = getUserSettings().filters[majorCategory as keyof UserSettings["filters"]];
+	// @ts-ignore
+	if (subCategory) filter = filter[subCategory];
+	if (!filter || !("filters" in filter)) return;
+	if (from === to) return;
+
+	// @ts-ignore
+	filter.filters = moveItem(filter.filters, from, to);
 
 	updateUserSettings();
 	deleteAllFeaturesOfType(mapObject);
