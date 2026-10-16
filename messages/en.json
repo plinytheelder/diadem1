@@ -770,5 +770,7 @@
 	"linked_trainers_error_friend_code": "Enter a 12-digit friend code.",
 	"linked_trainers_error_too_many": "You have linked the maximum number of trainers.",
 	"linked_trainers_error_queue_full": "Trainer lookups are busy or at their daily limit. Try again later.",
-	"linked_trainers_error_unavailable": "Trainer lookup is unavailable right now."
+	"linked_trainers_error_unavailable": "Trainer lookup is unavailable right now.",
+	"auto_battle_connected_accounts": "Connected Accounts",
+	"auto_battle_connect_new_account": "Connect new account"
 }
