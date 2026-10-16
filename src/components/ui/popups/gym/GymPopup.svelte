@@ -319,7 +319,7 @@
 							{@const pokemon = data.raid_pokemon_id ? getRaidPokemon(data) : possibleBosses[0]}
 							{@const pokemonName = mPokemon(pokemon)}
 							<QuickSearchButton
-								label={m.find_more_x({ x: m.pokemon_max_battles({ pokemon: pokemonName }) })}
+								label={m.find_more_x({ x: m.pokemon_raids({ pokemon: pokemonName }) })}
 								onclick={() => setActiveSearchRaidBoss(pokemonName, pokemon?.pokemon_id ?? 0, pokemon.form, pokemon.temp_evolution_id) }
 							/>
 						{/if}
