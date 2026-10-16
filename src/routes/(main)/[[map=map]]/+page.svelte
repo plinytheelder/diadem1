@@ -1,9 +1,9 @@
 <script lang="ts">
 	import BottomNav from "@/components/ui/BottomNav.svelte";
-	import ContextMenu from "@/components/ui/contextmenu/ContextMenu.svelte";
 	import { getConfig } from "@/lib/services/config/config";
 	import { getCurrentSelectedData } from "@/lib/mapObjects/currentSelectedState.svelte.js";
 	import WeatherOverview from "@/components/map/WeatherOverview.svelte";
+	import DataLimitNotice from "@/components/map/DataLimitNotice.svelte";
 	import { isSupportedFeature } from "@/lib/services/supportedFeatures";
 	import { closeMenu, getOpenedMenu, Menu } from "@/lib/ui/menus.svelte.js";
 	import Fabs from "@/components/ui/fab/Fabs.svelte";
@@ -29,16 +29,20 @@
 	import ErrorPageWebGl from "@/components/ui/ErrorPageWebGl.svelte";
 	import MapMain from "@/components/map/MapMain.svelte";
 	import MapMenuUi from "@/components/ui/MapMenuUi.svelte";
-	import type maplibre from "maplibre-gl";
+	import type * as maplibre from "maplibre-gl";
+	import { watch } from "runed";
 
 	let map: maplibre.Map | undefined = $state(undefined);
 
-	$effect(() => {
-		// When opening a popup on mobile while in a menu, close the menu
-		if (getCurrentSelectedData() && !isMenuSidebar()) {
-			closeMenu();
+	watch(
+		() => [getCurrentSelectedData(), isMenuSidebar()],
+		([selected, sidebar]) => {
+			// When opening a popup on mobile while in a menu, close the menu
+			if (selected && !sidebar) {
+				closeMenu();
+			}
 		}
-	});
+	);
 
 	const errorHref = getConfig().general.customHome ? "/" : "";
 </script>
@@ -63,8 +67,6 @@
 	<InvasionFilterset />
 	<MaxBattleFilterset />
 
-	<ContextMenu />
-
 	{#if isSearchViewActive()}
 		<div class="fixed z-50 top-safe-inset-top px-2 w-full pointer-events-none">
 			<ActiveSearchView />
@@ -81,8 +83,9 @@
 			{/if}
 		{/snippet}
 		{#snippet desktopRight()}
-			<div class="mb-auto mx-2 mt-safe-inset-top">
+			<div class="mb-auto mx-2 flex flex-col items-end gap-2">
 				<WeatherOverview />
+				<DataLimitNotice />
 			</div>
 			<div class="flex">
 				{#if !isSearchViewActive()}
@@ -96,10 +99,13 @@
 
 		{#snippet mobileTop()}
 			<div
-				class="fixed top-safe-inset-top z-10"
+				class="fixed top-safe-inset-top z-10 flex flex-col gap-2"
 				class:right-2={!isUiLeft() || isMenuSidebar()}
 				class:left-2={isUiLeft() && !isMenuSidebar()}
+				class:items-end={!isUiLeft() || isMenuSidebar()}
+				class:items-start={isUiLeft() && !isMenuSidebar()}
 			>
+				<DataLimitNotice />
 				<WeatherOverview />
 			</div>
 		{/snippet}

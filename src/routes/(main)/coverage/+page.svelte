@@ -3,7 +3,6 @@
 	import MapCoverage from "@/components/map/MapCoverage.svelte";
 	import { closeMenu, Menu, openMenu } from "@/lib/ui/menus.svelte.js";
 	import Fabs from "@/components/ui/fab/Fabs.svelte";
-	import { setIsContextMenuOpen } from "@/lib/ui/contextmenu.svelte.js";
 	import { isWebglSupported } from "@/lib/map/utils";
 	import {
 		coverageMapActiveSnapPoint,
@@ -14,7 +13,7 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import { closePopup } from "@/lib/mapObjects/interact";
 	import MapMenuUi from "@/components/ui/MapMenuUi.svelte";
-	import type maplibre from "maplibre-gl";
+	import type * as maplibre from "maplibre-gl";
 	import { fly } from "svelte/transition";
 	import CoverageMapTitle from "@/components/menus/coverageMap/CoverageMapTitle.svelte";
 	import { isMenuSidebar, isUiLeft } from "@/lib/utils/device";
@@ -33,7 +32,6 @@
 		setMap(undefined);
 		openMenu(Menu.COVERAGE_MAP, false);
 		closePopup();
-		setIsContextMenuOpen(false);
 		clearMapPositionUrlParams();
 	});
 
@@ -50,7 +48,9 @@
 			<!--			<DesktopMenu />-->
 		{/snippet}
 		{#snippet desktopRight()}
-			<Fabs {map} searchMode="coverage" />
+			<div class="mb-2">
+				<Fabs {map} searchMode="coverage" />
+			</div>
 			<div class="px-2 -mt-2">
 				<CoverageMapPopup />
 			</div>

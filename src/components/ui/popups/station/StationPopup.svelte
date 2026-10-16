@@ -226,9 +226,7 @@
 					<div class="-mx-4 mt-3">
 						<div class="w-full flex overflow-x-auto *:shrink-0 gap-3 px-4 mt-2">
 							{#each data.stationed_pokemon as pokemon}
-								<div
-									class="rounded-md p-4 bg-accent-highlight"
-								>
+								<div class="rounded-md p-4 bg-accent-highlight">
 									<div class="size-10 relative">
 										<ImagePopup
 											class="absolute size-full z-10"
@@ -238,7 +236,7 @@
 										{#if pokemon.background}
 											<ImagePopup
 												class="absolute size-10 mask-[radial-gradient(circle,black_35%,transparent_70%)]"
-												src={resize(getIconBackground(defender.background), {width: 64})}
+												src={resize(getIconBackground(defender.background), { width: 64 })}
 												alt={m.background()}
 											/>
 										{/if}
@@ -274,10 +272,7 @@
 		</TitledMainSection>
 	{/if}
 
-	<TitledMainSection
-		Icon={CircleDot}
-		title={m.access_this_power_spot()}
-	>
+	<TitledMainSection Icon={CircleDot} title={m.access_this_power_spot()}>
 		<MainAccessMap
 			lat={data.lat}
 			lon={data.lon}

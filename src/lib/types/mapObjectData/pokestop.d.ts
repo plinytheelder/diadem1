@@ -56,6 +56,7 @@ export type PokestopData = {
 	showcase_ranking_standard?: number;
 	showcase_expiry?: number;
 	showcase_rankings?: string;
+	isRouteEndpoint?: true;
 };
 
 export type Incident = {
@@ -117,11 +118,7 @@ export type ContestFocus =
 	| ContestFocusGeneration
 	| ContestFocusHatched
 	| ContestFocusTempEvo
-	| ContestFocusShiny
-	| QuestRewardPokemonIndividualStat
-	| QuestRewardLootTable
-	| QuestRewardFriendshipPoints
-	| QuestRewardTempEvoBranch;
+	| ContestFocusShiny;
 
 export type ContestFocusPokemon = {
 	type: "pokemon";
@@ -192,7 +189,10 @@ export type QuestReward =
 	| QuestRewardIncident
 	| QuestRewardPlayerAttribute
 	| QuestRewardEventBadge
-	| QuestRewardPokemonEgg;
+	| QuestRewardPokemonIndividualStat
+	| QuestRewardLootTable
+	| QuestRewardFriendshipPoints
+	| QuestRewardTempEvoBranch;
 
 export type QuestRewardExperience = {
 	type: RewardType.XP;

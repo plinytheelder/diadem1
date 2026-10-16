@@ -7,7 +7,7 @@
 		getDirectLinkObject,
 		openMapObject
 	} from "@/lib/features/directLinks.svelte.js";
-	import { clickMapHandler, updateCurrentPath } from "@/lib/mapObjects/interact";
+	import { clickMapHandler, openLocationPopup, updateCurrentPath } from "@/lib/mapObjects/interact";
 	import { updateAllMapObjects } from "@/lib/mapObjects/updateMapObject";
 	import * as m from "@/lib/paraglide/messages";
 	import {
@@ -15,7 +15,7 @@
 		resetUpdateMapObjectsInterval
 	} from "@/lib/map/mapObjectsInterval";
 	import { getMap, setMap } from "@/lib/map/map.svelte";
-	import { clearPressTimer, onContextMenu } from "@/lib/ui/contextmenu.svelte.js";
+	import { clearPressTimer, onLocationContext } from "$lib/map/locationEvents";
 	import { clearLoadMapObjectsInterval } from "@/lib/map/loadMapObjects";
 	import {
 		onMapDragStart,
@@ -24,13 +24,13 @@
 		onTouchStart,
 		onWindowFocus
 	} from "@/lib/map/events";
-	import maplibre from "maplibre-gl";
+	import type * as maplibre from "maplibre-gl";
 	import GeometryLayer from "@/components/map/GeometryLayer.svelte";
 	import DebugMenu from "@/components/map/DebugMenu.svelte";
 	import { hasLoadedFeature, LoadedFeature } from "@/lib/services/initialLoad.svelte.js";
 	import { openToast } from "@/lib/ui/toasts.svelte.js";
 	import MarkerCurrentLocation from "@/components/map/MarkerCurrentLocation.svelte";
-	import MarkerContextMenu from "@/components/map/MarkerContextMenu.svelte";
+	import LocationMapOverlay from "@/components/map/LocationMapOverlay.svelte";
 	import { getCurrentScoutData } from "@/lib/features/scout.svelte.js";
 	import {
 		getCurrentSelectedFiltersetIsShared,
@@ -55,6 +55,8 @@
 	import { getFeatureJump } from "$lib/utils/geo";
 	import { jumpTo } from "$lib/map/utils";
 	import { setSearchedGeometry } from "$lib/services/search.svelte";
+	import MapAttribution from "@/components/map/MapAttribution.svelte";
+	import { isUiLeft } from "$lib/utils/device";
 
 	let {
 		map = $bindable()
@@ -63,12 +65,13 @@
 	} = $props();
 
 	const mapPosition = getInitialMapPositionMain();
+	const [initialLocation, initialLocationZoom] = getMapPositionFromUrlParams();
 
 	async function onMapLoad(map: maplibre.Map) {
 		setMap(map);
 
 		map.on("moveend", onMapMoveEnd);
-		map.on("contextmenu", onContextMenu);
+		map.on("contextmenu", onLocationContext);
 		map.on("touchstart", onTouchStart);
 		map.on("touchend", clearPressTimer);
 		map.on("touchmove", clearPressTimer);
@@ -123,6 +126,10 @@
 				}
 			}
 
+			if (initialLocation && !directLinkFeature && !directLinkData) {
+				openLocationPopup(initialLocation, { replace: true, zoom: initialLocationZoom });
+			}
+
 			if (getCurrentSelectedFiltersetIsShared()) {
 				openMenu(Menu.FILTERS);
 				filtersetPageReset();
@@ -143,7 +150,7 @@
 		isInitUpdatedMapObjects = false;
 		setMap(undefined);
 		updateCurrentPath();
-		clearMapPositionUrlParams();
+		if (!initialLocation) clearMapPositionUrlParams();
 	});
 
 	onDestroy(() => {
@@ -162,7 +169,10 @@
 	onload={onMapLoad}
 	initialCenter={Coords.infer(mapPosition.center)}
 	initialZoom={mapPosition.zoom}
+	showAttribution={false}
 >
+	<MapAttribution {map} class={isUiLeft() ? "left-2 right-auto" : "right-2"} />
+
 	<GeometryLayer id={MapSourceId.SELECTED_WEATHER} reactive={false} />
 	<GeometryLayer
 		show={() => getOpenedMenu() === Menu.SCOUT}
@@ -175,6 +185,7 @@
 		data={getCurrentScoutData().smallPoints}
 	/>
 
+	<LocationMapOverlay />
 	<LayerSearchedGeometry />
 
 	<GeoJSON
@@ -199,6 +210,7 @@
 		/>
 		<FillLayer
 			id={MapObjectLayerId.POLYGON_FILL}
+			filter={["==", ["get", "type"], FeatureTypes.POLYGON]}
 			paint={{
 				"fill-color": [
 					"case",
@@ -211,9 +223,44 @@
 		/>
 		<LineLayer
 			id={MapObjectLayerId.POLYGON_STROKE}
+			filter={["==", ["get", "type"], FeatureTypes.POLYGON]}
 			layout={{ "line-cap": "round", "line-join": "round" }}
 			paint={{ "line-color": ["coalesce", ["get", "strokeColor"], "transparent"], "line-width": 1 }}
 			hoverCursor="pointer"
+		/>
+		<LineLayer
+			id={MapObjectLayerId.ROUTE_LINES}
+			filter={[
+				"all",
+				["==", ["get", "type"], FeatureTypes.LINE],
+				["==", ["get", "isVisible"], true],
+				["==", ["get", "isHighlighted"], false]
+			]}
+			layout={{ "line-cap": "round", "line-join": "round" }}
+			paint={{
+				"line-color": ["coalesce", ["get", "strokeColor"], "#6366f1"],
+				"line-opacity": ["case", ["coalesce", ["get", "isDimmed"], false], 0.2, 0.4],
+				"line-width": 4
+			}}
+			hoverCursor="pointer"
+			eventsIfTopMost={true}
+		/>
+		<LineLayer
+			id={MapObjectLayerId.ROUTE_LINES_HIGHLIGHTED}
+			filter={[
+				"all",
+				["==", ["get", "type"], FeatureTypes.LINE],
+				["==", ["get", "isVisible"], true],
+				["==", ["get", "isHighlighted"], true]
+			]}
+			layout={{ "line-cap": "round", "line-join": "round" }}
+			paint={{
+				"line-color": ["coalesce", ["get", "strokeColor"], "#6366f1"],
+				"line-opacity": 1,
+				"line-width": 7
+			}}
+			hoverCursor="pointer"
+			eventsIfTopMost={true}
 		/>
 		<CircleLayer
 			id={MapObjectLayerId.CIRCLES}
@@ -240,8 +287,7 @@
 		/>
 	</GeoJSON>
 
-	<MarkerCurrentLocation />
-	<MarkerContextMenu />
+	<MarkerCurrentLocation showLocationPopup />
 	<MarkerSearchedLocation />
 	<TimerLayer />
 </MapCommon>

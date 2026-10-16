@@ -23,6 +23,7 @@ export const INCIDENT_DISPLAY_CONTEST = 9;
 export const INCIDENT_DISPLAYS_INVASION = [1, 2, 3];
 export const INVASION_CHARACTER_LEADERS = [41, 42, 43, 44, 46];
 export const KECLEON_ID = 352;
+export const ALL_LURE_IDS = [501, 502, 503, 504, 505, 506];
 
 export enum Character {
 	GRUNT_MALE = 4,
@@ -177,7 +178,7 @@ export function getRewardText(reward: QuestReward) {
 				pokemon: mPokemon(reward.info)
 			});
 		case RewardType.TEMP_EVO_BRANCH_RESOURCE:
-			if (!reward.info.pokemon_id) return m.mega_energy()
+			if (!reward.info.pokemon_id) return m.mega_energy();
 			const pokemon: PokemonVisual = {
 				pokemon_id: reward.info.pokemon_id,
 				form: 0,
@@ -230,7 +231,7 @@ export function rewardTypeLabel(rewardType: RewardType) {
 		case RewardType.POKEMON_EGG:
 			return m.reward_egg();
 		case RewardType.TEMP_EVO_BRANCH_RESOURCE:
-			return m.mega_energy()
+			return m.mega_energy();
 		default:
 			return "";
 	}

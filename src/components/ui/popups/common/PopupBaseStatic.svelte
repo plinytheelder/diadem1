@@ -49,7 +49,8 @@
 	useMetadata(() => ({ title: props ? props.title : undefined }));
 
 	function getShareUrl() {
-		return getRootOrigin() + getCurrentPath({ data }) + "?lang=" + getLocale();
+		const path = getCurrentPath({ data });
+		return getRootOrigin() + path + (path.includes("?") ? "&" : "?") + "lang=" + getLocale();
 	}
 </script>
 

@@ -90,6 +90,27 @@ export class PokestopQuery extends DbMapObjectQuery<PokestopData, FilterPokestop
 	protected readonly joins = "LEFT JOIN incident ON incident.pokestop_id = pokestop.id";
 	protected readonly extraWhere = ["deleted = 0"];
 
+	protected buildLimitedQuery(
+		whereSql: string,
+		values: unknown[],
+		actualLimit: number
+	): { sql: string; values: unknown[] } {
+		// Limit distinct stops before rejoining incidents so child rows do not consume the object limit.
+		const sql = `
+			WITH limited_ids AS (
+				SELECT DISTINCT ${this.idColumn} AS id
+				FROM ${this.table} ${this.joins}${whereSql}
+				LIMIT ${actualLimit + 1}
+			)
+			SELECT ${this.fields.join(",")}
+			FROM limited_ids
+			JOIN ${this.table} ON ${this.idColumn} = limited_ids.id
+			${this.joins}${whereSql}
+			ORDER BY ${this.idColumn}`;
+
+		return { sql, values: [...values, ...values] };
+	}
+
 	protected getFilterWhere(filter: FilterPokestop | undefined): { sql: string; values: unknown[] } {
 		if (!filter?.enabled || filter.pokestopPlain.enabled) return { sql: "", values: [] };
 
@@ -165,10 +186,7 @@ export class PokestopQuery extends DbMapObjectQuery<PokestopData, FilterPokestop
 				}
 
 				for (const reward of filterset.megaResource ?? []) {
-					const rewardClausesForType = [
-						`${typeColumn} IN (?, ?)`,
-						`${pokemonColumn} = ?`
-					];
+					const rewardClausesForType = [`${typeColumn} IN (?, ?)`, `${pokemonColumn} = ?`];
 					const rewardValuesForType: unknown[] = [
 						RewardType.MEGA_ENERGY,
 						RewardType.TEMP_EVO_BRANCH_RESOURCE,
@@ -274,28 +292,21 @@ export class PokestopQuery extends DbMapObjectQuery<PokestopData, FilterPokestop
 			const contestValues: unknown[] = [];
 
 			for (const filterset of contestFilters) {
-				const contestFilterClauses = ["pokestop.showcase_expiry > UNIX_TIMESTAMP()"];
-
-				if (filterset.rankingStandard) {
-					contestFilterClauses.push("pokestop.showcase_ranking_standard = ?");
-					contestValues.push(filterset.rankingStandard);
-				}
-
-				if (filterset.focus.pokemon_id) {
+				const contestFilterClauses = ["pokestop.showcase_ranking_standard = ?"];
+				contestValues.push(filterset.rankingStandard);
+				if (filterset.focus.type === "pokemon") {
 					contestFilterClauses.push("pokestop.showcase_pokemon_id = ?");
 					contestValues.push(filterset.focus.pokemon_id);
-				}
-
-				if (filterset.focus.type_id) {
+				} else if (filterset.focus.type === "type") {
 					contestFilterClauses.push("pokestop.showcase_pokemon_type_id = ?");
-					contestValues.push(filterset.focus.type_id);
+					contestValues.push(filterset.focus.pokemon_type_1);
 				}
 
 				contestClauses.push(`(${contestFilterClauses.join(" AND ")})`);
 			}
 
 			clauses.push(
-				`(incident.expiration > UNIX_TIMESTAMP() AND incident.display_type = ? AND ${contestClauses.length ? `(${contestClauses.join(" OR ")})` : "pokestop.showcase_expiry > UNIX_TIMESTAMP()"})`
+				`(incident.expiration > UNIX_TIMESTAMP() AND incident.display_type = ? AND pokestop.showcase_expiry > UNIX_TIMESTAMP()${contestClauses.length ? ` AND (${contestClauses.join(" OR ")})` : ""})`
 			);
 			values.push(INCIDENT_DISPLAY_CONTEST, ...contestValues);
 		}
@@ -431,10 +442,7 @@ export class PokestopQuery extends DbMapObjectQuery<PokestopData, FilterPokestop
 			incident.slot_1_form = getNormalizedForm(incident.slot_1_pokemon_id, incident.slot_1_form);
 			incident.slot_2_form = getNormalizedForm(incident.slot_2_pokemon_id, incident.slot_2_form);
 			incident.slot_3_form = getNormalizedForm(incident.slot_3_pokemon_id, incident.slot_3_form);
-			incident.confirmed_reward = getConfirmedInvasionReward(
-				incident,
-				getActiveCharacters()
-			);
+			incident.confirmed_reward = getConfirmedInvasionReward(incident, getActiveCharacters());
 		}
 
 		if (context) this.stripUnpermitted(data, context);

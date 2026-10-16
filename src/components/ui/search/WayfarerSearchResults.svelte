@@ -7,7 +7,7 @@
 	import { point } from "@turf/turf";
 	import { resize } from "@/lib/services/assets";
 	import { getIconGym, getIconPokestop } from "@/lib/services/uicons.svelte";
-	import type maplibre from "maplibre-gl";
+	import type * as maplibre from "maplibre-gl";
 
 	let {
 		results,
@@ -22,7 +22,7 @@
 	}
 </script>
 
-{#each results as result (result.item.key)}
+{#each results as result}
 	{@const entry = result.item}
 	{#if entry.type === SearchableType.AREA}
 		<SearchItem

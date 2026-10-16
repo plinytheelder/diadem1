@@ -6,18 +6,39 @@
 		supportsPopupAction,
 		togglePopupAction
 	} from "@/lib/ui/popupActions.js";
-	import { CircleDot, CircleOff, Eye, EyeClosed, Navigation, Ticket, Timer, TimerOff } from "@lucide/svelte";
+	import {
+		Binoculars,
+		CircleDot,
+		CircleOff,
+		Eye,
+		EyeClosed,
+		Focus,
+		Minus,
+		Navigation,
+		Plus,
+		Timer,
+		TimerOff,
+		Scan,
+		Ticket
+	} from "@lucide/svelte";
 	import * as m from "@/lib/paraglide/messages";
 	import { getMapsUrl } from "@/lib/utils/mapUrl";
 	import { Coords } from "@/lib/utils/coordinates";
 	import { getShareTitle } from "@/lib/features/shareTexts";
 	import { getCurrentSelectedData } from "@/lib/mapObjects/currentSelectedState.svelte";
 	import PopupButton from "@/components/ui/popups/common/PopupButton.svelte";
-	import { type MapData, MapObjectType } from "$lib/mapObjects/mapObjectTypes";
-	import { currentTimestamp } from "$lib/utils/currentTimestamp";
-	import { hasActiveRaid } from "$lib/utils/gymUtils";
-	import { isMaxBattleActive } from "$lib/utils/stationUtils";
-	import { isSupportedFeature } from "$lib/services/supportedFeatures";
+	import type { MapData } from "$lib/mapObjects/mapObjectTypes";
+	import { ClientMapObjectType, MapObjectType } from "$lib/mapObjects/mapObjectTypes";
+	import { getFocusedRouteMapId, setFocusedRouteMapId } from "$lib/features/focusedRoute.svelte.js";
+	import { refreshRouteFeatures } from "$lib/map/featuresGen.svelte";
+	import { getUserSettings } from "@/lib/services/userSettings.svelte";
+	import { setCurrentScoutCenter, setCurrentScoutCoords } from "$lib/features/scout.svelte";
+	import { getConfig } from "$lib/services/config/config";
+	import { hasFeatureAnywhere } from "$lib/services/user/checkPerm";
+	import { getUserDetails } from "$lib/services/user/userDetails.svelte";
+	import { Menu, openMenu } from "$lib/ui/menus.svelte";
+	import { Features } from "$lib/utils/features";
+	import { isMenuSidebar } from "$lib/utils/device";
 
 	let {
 		lat,
@@ -29,11 +50,18 @@
 		data: MapData;
 	} = $props();
 
-	let selectedType = $derived(data?.type);
+	let selectedType = $derived(data.type === ClientMapObjectType.LOCATION ? undefined : data.type);
 	let selectedMapId = $derived(data?.mapId);
+	let routeFocused = $derived(
+		selectedType === MapObjectType.ROUTE && getFocusedRouteMapId() === selectedMapId
+	);
 </script>
 
-<div class="flex px-4 gap-2 w-full overflow-x-auto pb-2">
+<div
+	class="px-4 flex gap-2 w-full overflow-x-auto pb-2"
+	class:flex-wrap={isMenuSidebar()}
+	class:*:flex-1={isMenuSidebar()}
+>
 	<PopupButton
 		variant="default"
 		Icon={Navigation}
@@ -47,6 +75,31 @@
 			Icon={Ticket}
 			label="Get Remote Invite"
 			onclick={() => {}}
+		/>
+	{/if}
+	{#if data.type === ClientMapObjectType.LOCATION && getConfig().tools.scout && hasFeatureAnywhere(getUserDetails().permissions, Features.SCOUT)}
+		<PopupButton
+			Icon={Binoculars}
+			label={m.scout_location()}
+			onclick={() => {
+				const coords = new Coords(lat, lon);
+				setCurrentScoutCoords([coords]);
+				setCurrentScoutCenter(coords);
+				openMenu(Menu.SCOUT);
+			}}
+		/>
+	{/if}
+	{#if supportsPopupAction(selectedType, PopupAction.FOCUS_ROUTE) && getUserSettings().filters.route.enabled}
+		<PopupButton
+			Icon={Focus}
+			label={m.focus_route()}
+			IconActive={Scan}
+			labelActive={m.unfocus_route()}
+			active={routeFocused}
+			onclick={() => {
+				setFocusedRouteMapId(routeFocused ? null : selectedMapId);
+				refreshRouteFeatures();
+			}}
 		/>
 	{/if}
 	{#if supportsPopupAction(selectedType, PopupAction.DIMMED)}
