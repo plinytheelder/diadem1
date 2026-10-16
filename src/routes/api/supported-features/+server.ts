@@ -20,6 +20,7 @@ export const GET: RequestHandler = async ({ locals, request }) => {
 		geometryLookup:
 			Boolean(config.nominatim?.url) &&
 			(!Boolean(config.pelias?.url) || Boolean(config.photon?.url)),
-		autoBattle: Boolean(config.evilStar?.autoBattle) || Boolean(config?.bots?.enableAutoBattle)
+		autoBattle: Boolean(config.evilStar?.autoBattle) || Boolean(config?.bots?.enableAutoBattle),
+		personalShiny: Boolean(config.playerId?.url && config.playerId?.apiKey)
 	} as SupportedFeatures);
 };

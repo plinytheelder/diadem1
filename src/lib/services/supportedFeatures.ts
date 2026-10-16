@@ -5,7 +5,8 @@ export type optionalFeatures =
 	| "authRequired"
 	| "showFullscreenLogin"
 	| "geometryLookup"
-	| "autoBattle";
+	| "autoBattle"
+	| "personalShiny";
 
 export type SupportedFeatures = {
 	[key in optionalFeatures]: boolean;
@@ -18,7 +19,8 @@ let supportedFeatures: SupportedFeatures = {
 	authRequired: false,
 	showFullscreenLogin: false,
 	geometryLookup: false,
-	autoBattle: false
+	autoBattle: false,
+	personalShiny: false
 };
 
 export function isSupportedFeature(feature: optionalFeatures) {
