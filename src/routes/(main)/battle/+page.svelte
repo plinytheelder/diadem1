@@ -2,7 +2,6 @@
 	import { onMount, tick } from "svelte";
 	import { setMap } from "$lib/map/map.svelte";
 	import { closePopup } from "$lib/mapObjects/interact";
-	import { setIsContextMenuOpen } from "$lib/ui/contextmenu.svelte";
 	import { useMetadata } from "$lib/ui/metadata.svelte";
 	import { m } from "@/lib/paraglide/messages";
 	import { getIconPokemon, getIconRaidEgg } from "$lib/services/uicons.svelte";
@@ -38,7 +37,6 @@
 		await tick();
 		setMap(undefined);
 		closePopup();
-		setIsContextMenuOpen(false);
 	});
 
 	type Battle = AvailableBoss;
