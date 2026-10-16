@@ -1,6 +1,7 @@
 import type { GymData } from "$lib/types/mapObjectData/gym";
 import type { StationData } from "$lib/types/mapObjectData/station";
 import { getLocale } from "@/lib/paraglide/runtime";
+import * as m from "@/lib/paraglide/messages";
 import { MapObjectType } from "$lib/mapObjects/mapObjectTypes";
 
 export type BattleType = "raid" | "max_battle";
@@ -97,6 +98,7 @@ export type BattleSessionState =
 export type AutoBattleApiErrorBody = {
 	error?: string;
 	message?: string;
+	errorId?: string;
 };
 
 export type AutoBattleHealth = {
@@ -119,6 +121,11 @@ function getAutoBattleErrorMessage(status: number, body: AutoBattleApiErrorBody)
 	}
 	if (status === 409 && body.error === "request is still in progress") {
 		return "This invite request is still being processed.";
+	}
+	if (body.errorId === "no_workers_available") return m.auto_battle_error_no_workers();
+	if (body.errorId === "bearer_token_required") return m.auto_battle_error_not_configured();
+	if (body.errorId) {
+		return m.auto_battle_error_with_reason({ reason: body.errorId.replaceAll("_", " ") });
 	}
 	return body.error ?? body.message ?? "The Auto Battle request failed.";
 }

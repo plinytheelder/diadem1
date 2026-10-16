@@ -50,7 +50,15 @@ export async function proxyAutoBattleRequest(request: Request, path: string, pai
 			response = await fetch(url, { method: request.method, headers, body });
 		}
 
-		return new Response(await response.arrayBuffer(), {
+		const responseBody = await response.arrayBuffer();
+		if (!response.ok) {
+			log.error(
+				`Auto Battle request ${request.method} ${path} failed with status ${response.status}: ` +
+					(new TextDecoder().decode(responseBody) || "(empty response)")
+			);
+		}
+
+		return new Response(responseBody, {
 			status: response.status,
 			headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/json" }
 		});
