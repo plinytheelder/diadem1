@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Button from "@/components/ui/input/Button.svelte";
-	import { Eye, EyeClosed } from "@lucide/svelte";
+	import { Eye, EyeClosed, GripVertical } from "@lucide/svelte";
+	import type { HTMLAttributes } from "svelte/elements";
+	import * as m from "@/lib/paraglide/messages";
 
 	import type { AnyFilterset } from "@/lib/features/filters/filtersets";
 	import { type ModalType, openModal } from "@/lib/ui/modal.svelte";
@@ -21,13 +23,17 @@
 		majorCategory,
 		subCategory,
 		filterModal,
-		mapObject
+		mapObject,
+		dragHandle = undefined,
+		isDragging = false
 	}: {
 		filter: AnyFilterset;
 		majorCategory: SelectedFiltersetData["majorCategory"];
 		subCategory?: FilterCategory;
 		filterModal: ModalType;
 		mapObject: MapObjectType;
+		dragHandle?: HTMLAttributes<HTMLSpanElement>;
+		isDragging?: boolean;
 	} = $props();
 </script>
 
@@ -42,10 +48,28 @@
 	}}
 >
 	<div
-		class="h-12 w-0.5 mr-1.5 transition-colors shrink-0"
+		class="h-12 w-0.5 transition-colors shrink-0"
+		class:mr-1.5={!dragHandle}
 		class:bg-green={filter.enabled}
 		class:bg-red={!filter.enabled}
 	></div>
+
+	{#if dragHandle}
+		<span
+			{...dragHandle}
+			role="button"
+			tabindex="0"
+			aria-label={m.reorder_filter()}
+			title={m.reorder_filter()}
+			data-filterset-drag-handle
+			data-base-ui-swipe-ignore
+			class="shrink-0 self-stretch flex items-center px-1 text-muted-foreground hover:text-foreground touch-none select-none rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
+			class:cursor-grab={!isDragging}
+			class:cursor-grabbing={isDragging}
+		>
+			<GripVertical size="16" />
+		</span>
+	{/if}
 
 	<div
 		class="shrink-1 min-w-0 w-full flex gap-2 items-center justify-start rounded-md py-2 h-12 m-0! pr-0 transition-opacity relative"

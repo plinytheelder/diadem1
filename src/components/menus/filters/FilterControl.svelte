@@ -14,6 +14,7 @@
 	} from "@/lib/features/filters/filtersetPages.svelte";
 	import {
 		getNewFilterset,
+		moveFilterset,
 		type SelectedFiltersetData,
 		setCurrentSelectedFilterset
 	} from "@/lib/features/filters/filtersetPageData.svelte";
@@ -27,6 +28,8 @@
 	import { mAny } from "@/lib/utils/anyMessage";
 	import { MapObjectType } from "@/lib/mapObjects/mapObjectTypes";
 	import S2CellFilters from "@/components/menus/filters/S2CellFilters.svelte";
+	import { getDropIndex, getShiftForRow } from "@/lib/features/filters/filtersetOrder";
+	import type { HTMLAttributes } from "svelte/elements";
 
 	let {
 		majorCategory,
@@ -69,6 +72,87 @@
 				filterModal !== undefined &&
 				filter.enabled)
 	);
+
+	let listElement: HTMLDivElement | undefined = $state();
+	let drag = $state<{
+		pointerId: number;
+		from: number;
+		startY: number;
+		rowTops: number[];
+		offset: number;
+	}>();
+	let dropIndex: number = $derived(drag ? getDropIndex(drag.rowTops, drag.from, drag.offset) : -1);
+	let dragStep: number = $derived(
+		drag && drag.rowTops.length > 1 ? drag.rowTops[1] - drag.rowTops[0] : 0
+	);
+
+	function getRowTops() {
+		if (!listElement) return [];
+		return Array.from(listElement.children).map((row) => row.getBoundingClientRect().top);
+	}
+
+	function rowTransform(index: number) {
+		if (!drag) return undefined;
+		const offset =
+			index === drag.from ? drag.offset : getShiftForRow(index, drag.from, dropIndex, dragStep);
+		return offset === 0 ? undefined : `translateY(${offset}px)`;
+	}
+
+	function focusHandle(index: number) {
+		tick().then(() => {
+			const row = listElement?.children.item(index);
+			row?.querySelector<HTMLElement>("[data-filterset-drag-handle]")?.focus();
+		});
+	}
+
+	function dragHandle(index: number): HTMLAttributes<HTMLSpanElement> {
+		return {
+			onpointerdown: (event) => {
+				if (event.button !== 0 || drag) return;
+				event.preventDefault();
+				event.stopPropagation();
+				event.currentTarget.setPointerCapture(event.pointerId);
+				drag = {
+					pointerId: event.pointerId,
+					from: index,
+					startY: event.clientY,
+					rowTops: getRowTops(),
+					offset: 0
+				};
+			},
+			onpointermove: (event) => {
+				if (!drag || event.pointerId !== drag.pointerId) return;
+				const tops = drag.rowTops;
+				const min = tops[0] - tops[drag.from];
+				const max = tops[tops.length - 1] - tops[drag.from];
+				drag.offset = Math.min(max, Math.max(min, event.clientY - drag.startY));
+			},
+			onpointerup: (event) => {
+				if (!drag || event.pointerId !== drag.pointerId) return;
+				const from = drag.from;
+				const to = dropIndex;
+				drag = undefined;
+				moveFilterset(majorCategory, subCategory, from, to, mapObject);
+			},
+			onpointercancel: (event) => {
+				if (drag?.pointerId === event.pointerId) drag = undefined;
+			},
+			onclick: (event) => {
+				event.stopPropagation();
+			},
+			onkeydown: (event) => {
+				let to: number;
+				if (event.key === "ArrowUp") to = index - 1;
+				else if (event.key === "ArrowDown") to = index + 1;
+				else return;
+				event.preventDefault();
+				event.stopPropagation();
+				if (to < 0 || to >= (filtersets?.length ?? 0)) return;
+				moveFilterset(majorCategory, subCategory, index, to, mapObject);
+				focusHandle(to);
+			}
+		};
+	}
 
 	function onAddFilter() {
 		if (!filterModal) return;
@@ -167,9 +251,30 @@
 
 	{#if isEnabled && isFilterable}
 		{#if hasAnyFilterset && filterModal && (!collapsibleByFiltersets || expanded)}
-			<div class="w-full my-1 flex flex-col gap-1 pl-2" transition:slide={{ duration: 90 }}>
-				{#each filtersets ?? [] as filterset (filterset.id)}
-					<Filterset filter={filterset} {majorCategory} {subCategory} {filterModal} {mapObject} />
+			<div
+				class="w-full my-1 flex flex-col gap-1 pl-2"
+				transition:slide={{ duration: 90 }}
+				bind:this={listElement}
+			>
+				{#each filtersets ?? [] as filterset, index (filterset.id)}
+					<div
+						class="flex flex-col"
+						class:transition-transform={drag && drag.from !== index}
+						class:relative={drag?.from === index}
+						class:z-10={drag?.from === index}
+						class:shadow-lg={drag?.from === index}
+						style:transform={rowTransform(index)}
+					>
+						<Filterset
+							filter={filterset}
+							{majorCategory}
+							{subCategory}
+							{filterModal}
+							{mapObject}
+							dragHandle={(filtersets?.length ?? 0) > 1 ? dragHandle(index) : undefined}
+							isDragging={drag?.from === index}
+						/>
+					</div>
 				{/each}
 			</div>
 

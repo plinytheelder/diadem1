@@ -261,6 +261,7 @@
 	"filter_template_raids_elite": "Elite Raids",
 	"enable_filters": "Enable filters",
 	"disable_filters": "Disable filters",
+	"reorder_filter": "Drag to reorder",
 	"filter_template_raids_raids": "Raids",
 	"filter_template_raids_bosses": "Bosses",
 	"filter_template_raids_eggs": "Eggs",
