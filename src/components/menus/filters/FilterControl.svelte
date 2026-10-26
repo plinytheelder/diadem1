@@ -5,6 +5,8 @@
 	import Switch from "@/components/ui/input/Switch.svelte";
 	import Button from "@/components/ui/input/Button.svelte";
 
+	import { sortFiltersets } from "@/lib/features/filters/sortFiltersets";
+	import { reorderFiltersets } from "@/lib/features/filters/filtersetPageData.svelte";
 	import { slide } from "svelte/transition";
 	import Filterset from "@/components/menus/filters/Filterset.svelte";
 	import { type ModalType, openModal } from "@/lib/ui/modal.svelte.js";
@@ -14,7 +16,6 @@
 	} from "@/lib/features/filters/filtersetPages.svelte";
 	import {
 		getNewFilterset,
-		moveFilterset,
 		type SelectedFiltersetData,
 		setCurrentSelectedFilterset
 	} from "@/lib/features/filters/filtersetPageData.svelte";
@@ -28,8 +29,6 @@
 	import { mAny } from "@/lib/utils/anyMessage";
 	import { MapObjectType } from "@/lib/mapObjects/mapObjectTypes";
 	import S2CellFilters from "@/components/menus/filters/S2CellFilters.svelte";
-	import { getDropIndex, getShiftForRow } from "@/lib/features/filters/filtersetOrder";
-	import type { HTMLAttributes } from "svelte/elements";
 
 	let {
 		majorCategory,
@@ -72,87 +71,6 @@
 				filterModal !== undefined &&
 				filter.enabled)
 	);
-
-	let listElement: HTMLDivElement | undefined = $state();
-	let drag = $state<{
-		pointerId: number;
-		from: number;
-		startY: number;
-		rowTops: number[];
-		offset: number;
-	}>();
-	let dropIndex: number = $derived(drag ? getDropIndex(drag.rowTops, drag.from, drag.offset) : -1);
-	let dragStep: number = $derived(
-		drag && drag.rowTops.length > 1 ? drag.rowTops[1] - drag.rowTops[0] : 0
-	);
-
-	function getRowTops() {
-		if (!listElement) return [];
-		return Array.from(listElement.children).map((row) => row.getBoundingClientRect().top);
-	}
-
-	function rowTransform(index: number) {
-		if (!drag) return undefined;
-		const offset =
-			index === drag.from ? drag.offset : getShiftForRow(index, drag.from, dropIndex, dragStep);
-		return offset === 0 ? undefined : `translateY(${offset}px)`;
-	}
-
-	function focusHandle(index: number) {
-		tick().then(() => {
-			const row = listElement?.children.item(index);
-			row?.querySelector<HTMLElement>("[data-filterset-drag-handle]")?.focus();
-		});
-	}
-
-	function dragHandle(index: number): HTMLAttributes<HTMLSpanElement> {
-		return {
-			onpointerdown: (event) => {
-				if (event.button !== 0 || drag) return;
-				event.preventDefault();
-				event.stopPropagation();
-				event.currentTarget.setPointerCapture(event.pointerId);
-				drag = {
-					pointerId: event.pointerId,
-					from: index,
-					startY: event.clientY,
-					rowTops: getRowTops(),
-					offset: 0
-				};
-			},
-			onpointermove: (event) => {
-				if (!drag || event.pointerId !== drag.pointerId) return;
-				const tops = drag.rowTops;
-				const min = tops[0] - tops[drag.from];
-				const max = tops[tops.length - 1] - tops[drag.from];
-				drag.offset = Math.min(max, Math.max(min, event.clientY - drag.startY));
-			},
-			onpointerup: (event) => {
-				if (!drag || event.pointerId !== drag.pointerId) return;
-				const from = drag.from;
-				const to = dropIndex;
-				drag = undefined;
-				moveFilterset(majorCategory, subCategory, from, to, mapObject);
-			},
-			onpointercancel: (event) => {
-				if (drag?.pointerId === event.pointerId) drag = undefined;
-			},
-			onclick: (event) => {
-				event.stopPropagation();
-			},
-			onkeydown: (event) => {
-				let to: number;
-				if (event.key === "ArrowUp") to = index - 1;
-				else if (event.key === "ArrowDown") to = index + 1;
-				else return;
-				event.preventDefault();
-				event.stopPropagation();
-				if (to < 0 || to >= (filtersets?.length ?? 0)) return;
-				moveFilterset(majorCategory, subCategory, index, to, mapObject);
-				focusHandle(to);
-			}
-		};
-	}
 
 	function onAddFilter() {
 		if (!filterModal) return;
@@ -254,27 +172,22 @@
 			<div
 				class="w-full my-1 flex flex-col gap-1 pl-2"
 				transition:slide={{ duration: 90 }}
-				bind:this={listElement}
+				{@attach (node) =>
+					sortFiltersets(node, (from, to) =>
+						reorderFiltersets(filtersets ?? [], from, to, mapObject)
+					)}
 			>
 				{#each filtersets ?? [] as filterset, index (filterset.id)}
-					<div
-						class="flex flex-col"
-						class:transition-transform={drag && drag.from !== index}
-						class:relative={drag?.from === index}
-						class:z-10={drag?.from === index}
-						class:shadow-lg={drag?.from === index}
-						style:transform={rowTransform(index)}
-					>
-						<Filterset
-							filter={filterset}
-							{majorCategory}
-							{subCategory}
-							{filterModal}
-							{mapObject}
-							dragHandle={(filtersets?.length ?? 0) > 1 ? dragHandle(index) : undefined}
-							isDragging={drag?.from === index}
-						/>
-					</div>
+					<Filterset
+						filter={filterset}
+						{majorCategory}
+						{subCategory}
+						{filterModal}
+						{mapObject}
+						{index}
+						count={filtersets?.length ?? 0}
+						onMove={(to) => reorderFiltersets(filtersets ?? [], index, to, mapObject)}
+					/>
 				{/each}
 			</div>
 
